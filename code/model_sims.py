@@ -426,6 +426,7 @@ cal = Calibration()
 cal.rho_u = 0.75
 
 sd_sym_bsl_rho_u, sd_asym_bsl_rho_u = sweep_stddevs_through_phi_m(phi_pi_baseline, phi_y_baseline, cal)
+sd_sym_simple_rho_u, sd_asym_simple_rho_u = sweep_stddevs_through_phi_m(phi_pi_baseline, phi_y_simple, cal)
 
 
 # %% Loss function numerical exploration
@@ -449,57 +450,68 @@ def save_loss_plot(x, y1, y2, y3, y4, xlabel, ylabel, title, path):
     plt.plot(x, y3, linewidth=2, label=r"Asymmetric, $l_m$ = 0.0")
     plt.plot(x, y4, linewidth=2, label=r"Asymmetric, $l_m$ = 0.1")
     plt.xlabel(xlabel); plt.ylabel(ylabel); plt.title(title)
+    plt.ylim(0.9, 1.6)
     plt.legend(); plt.grid(True, alpha=0.3); plt.tight_layout()
     plt.savefig(path, dpi=180); plt.close()
 
 
-def loss_function(sd_y, sd_pi, sd_m, l_y, l_pi, l_m):
-    loss_y = l_y*sd_y
-    loss_pi = l_pi*sd_pi
-    loss_m = l_m*sd_m
-    loss = loss_y + loss_pi + loss_m
-    try:  # if lists, normalize by first value
-        rel_loss = loss / loss[0]
-        return rel_loss
-    except Exception:
-        return loss
 
-l_y_bsl = 1
-l_pi_bsl = 1
-phi_m_grid
-phi_pi_baseline
-phi_y_baseline
+def sweep_loss_function(l_ms, sd_sym, sd_asym, l_y=1, l_pi=1):
+    
+    def loss_function(sd_y, sd_pi, sd_m, l_y, l_pi, l_m):
+        loss_y = l_y*sd_y
+        loss_pi = l_pi*sd_pi
+        loss_m = l_m*sd_m
+        loss = loss_y + loss_pi + loss_m
+        try:  # if lists, normalize by first value
+            rel_loss = loss / loss[0]
+            return rel_loss
+        except Exception:
+            return loss
+    
+    losses_dict = {}
+    for l_m in l_ms:
+        loss_sym_bsl = loss_function(
+            sd_sym['sd_y'],
+            sd_sym['sd_pi'],
+            sd_sym['sd_m'],
+            l_y, l_pi, l_m)
+        loss_asym_bsl = loss_function(
+            sd_asym['sd_y'],
+            sd_asym['sd_pi'],
+            sd_asym['sd_m'],
+            l_y, l_pi, l_m)
+        losses_dict[f'sym_lm_{l_m}'] = loss_sym_bsl
+        losses_dict[f'asym_lm_{l_m}'] = loss_asym_bsl
+    
+    return losses_dict
 
-loss_lm_no_mon = {}
-loss_lm_mon_pers = {}
+l_ms = [0, 0.1]
+loss_lm_no_mon = sweep_loss_function(
+    l_ms=l_ms,
+    sd_sym=sd_sym_baseline,
+    sd_asym=sd_asym_baseline
+    )
+# now rho_u
+loss_lm_mon_pers =  sweep_loss_function(
+    l_ms=l_ms,
+    sd_sym=sd_sym_bsl_rho_u,
+    sd_asym=sd_asym_bsl_rho_u
+    )
 
-for l_m in [0, 0.1]:
-    loss_sym_bsl = loss_function(
-        sd_sym_baseline['sd_y'],
-        sd_sym_baseline['sd_pi'],
-        sd_sym_baseline['sd_m'],
-        l_y_bsl, l_pi_bsl, l_m)
-    loss_asym_bsl = loss_function(
-        sd_asym_baseline['sd_y'],
-        sd_asym_baseline['sd_pi'],
-        sd_asym_baseline['sd_m'],
-        l_y_bsl, l_pi_bsl, l_m)
-    loss_lm_no_mon[f'sym_lm_{l_m}'] = loss_sym_bsl
-    loss_lm_no_mon[f'asym_lm_{l_m}'] = loss_asym_bsl
+# no reaction to GDP
+loss_lm_no_mon_no_gdp = sweep_loss_function(
+    l_ms=l_ms,
+    sd_sym=sd_sym_simple,
+    sd_asym=sd_asym_simple
+    )
 
-    # now rho_u
-    loss_sym_mon_pers = loss_function(
-        sd_sym_bsl_rho_u['sd_y'],
-        sd_sym_bsl_rho_u['sd_pi'],
-        sd_sym_bsl_rho_u['sd_m'],
-        l_y_bsl, l_pi_bsl, l_m)
-    loss_asym_bsl_mon_pers = loss_function(
-        sd_asym_bsl_rho_u['sd_y'],
-        sd_asym_bsl_rho_u['sd_pi'],
-        sd_asym_bsl_rho_u['sd_m'],
-        l_y_bsl, l_pi_bsl, l_m)
-    loss_lm_mon_pers[f'sym_lm_{l_m}'] = loss_sym_mon_pers
-    loss_lm_mon_pers[f'asym_lm_{l_m}'] = loss_asym_bsl_mon_pers
+# mon perss, no reaction to gdp
+loss_lm_mon_no_gdp = sweep_loss_function(
+    l_ms=l_ms,
+    sd_sym=sd_sym_simple_rho_u,
+    sd_asym=sd_asym_simple_rho_u
+    )
 
 # no monetary pers.
 save_loss_plot(x=phi_m_grid,
@@ -523,41 +535,27 @@ save_loss_plot(x=phi_m_grid,
                ylabel='L = ${y_{gap}}^2$ + ${\pi_{gap}}^2$ + $l_m$ ${m_{gap}}^2$',
                title="Relative loss vs $\phi_m$ under monetary shock persistence",
                path=OUT / "mon_pers.png")
-             
 
 
+# No reaction to GDP
+save_loss_plot(x=phi_m_grid,
+               y1=loss_lm_no_mon_no_gdp['sym_lm_0'],
+               y2=loss_lm_no_mon_no_gdp['sym_lm_0.1'],
+               y3=loss_lm_no_mon_no_gdp['asym_lm_0'],
+               y4=loss_lm_no_mon_no_gdp['asym_lm_0.1'],
+               xlabel=r"$\phi_m$",
+               ylabel='L = ${y_{gap}}^2$ + ${\pi_{gap}}^2$ + $l_m$ ${m_{gap}}^2$',
+               title="Relative loss vs $\phi_m$ under $\phi_y$=0",
+               path=OUT / "no_mon_pers_no_gdp.png")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# No reaction to GDP, monetary persistence
+save_loss_plot(x=phi_m_grid,
+               y1=loss_lm_mon_no_gdp['sym_lm_0'],
+               y2=loss_lm_mon_no_gdp['sym_lm_0.1'],
+               y3=loss_lm_mon_no_gdp['asym_lm_0'],
+               y4=loss_lm_mon_no_gdp['asym_lm_0.1'],
+               xlabel=r"$\phi_m$",
+               ylabel='L = ${y_{gap}}^2$ + ${\pi_{gap}}^2$ + $l_m$ ${m_{gap}}^2$',
+               title="Relative loss vs $\phi_m$ under $\phi_y$=0 and monetary persistence",
+               path=OUT / "mon_pers_no_gdp.png")
 
