@@ -4,9 +4,7 @@ from typing import Dict
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
-import json
-import textwrap
-OUT = Path("D:/Users/c337191/Documents/Fed_Put/figs_monpers")
+OUT = Path(r"D:\Economia\Agenda Pesquisa\fed_put")
 OUT.mkdir(parents=True, exist_ok=True)
 
 # %%
@@ -24,7 +22,7 @@ class Calibration:
     rho_z: float = 0.80     # Demand
     rho_a: float = 0.90     # Technology
     rho_d: float = 0.90     # Dividend
-    rho_u: float = 0.75     # Monetary
+    rho_u: float = 0.00     # Monetary
 
     # Shock standard deviations
     sd_z: float = 0.005
@@ -228,6 +226,8 @@ def save_irf_plot(h, y1, y2, y3, y4, ylabel, label1, label2, label3, label4, tit
     plt.legend(); plt.grid(True, alpha=0.3); plt.tight_layout()
     plt.savefig(path, dpi=180); plt.close()
 
+
+
 # %% Simulations
 
 cal = Calibration()
@@ -236,7 +236,7 @@ phi_y_baseline = 0.25
 phi_y_simple = 0.00
 phi_m_baseline = 0.25
 
-phi_m_grid = np.linspace(0.0, 1.5, 16)
+phi_m_grid = np.linspace(0.0, 1.0, 41)
 
 def sweep_stddevs_through_phi_m(phi_pi, phi_y, cal, seed=42):
     sym_list = []
@@ -251,13 +251,14 @@ def sweep_stddevs_through_phi_m(phi_pi, phi_y, cal, seed=42):
 sd_sym_baseline, sd_asym_baseline = sweep_stddevs_through_phi_m(phi_pi_baseline, phi_y_baseline, cal)
 sd_sym_simple, sd_asym_simple = sweep_stddevs_through_phi_m(phi_pi_baseline, phi_y_simple, cal)
 
+# %%
 # output gap sd figure, exploring change in phi_m
 save_sd_plot(phi_m_grid, sd_sym_simple["sd_y"], sd_sym_baseline["sd_y"],
              sd_asym_simple['sd_y'], sd_asym_baseline['sd_y'],
              r"$\phi_m$",
              "Std. dev. of output gap",
-             rf"Outputgap volatility vs $\phi_m$ ($\phi_\pi={phi_pi_baseline}$)",
-               OUT / "phi_m_std_output_gap.png")
+             rf"Output gap volatility vs $\phi_m$ ($\phi_\pi={phi_pi_baseline}$)",
+               OUT / "figs\\phi_m_std_output_gap.png")
 
 # inflation
 save_sd_plot(phi_m_grid, sd_sym_simple["sd_pi"], sd_sym_baseline["sd_pi"],
@@ -265,7 +266,7 @@ save_sd_plot(phi_m_grid, sd_sym_simple["sd_pi"], sd_sym_baseline["sd_pi"],
              r"$\phi_m$",
              "Std. dev. of inflation",
              rf"Inflation volatility vs $\phi_m$ ($\phi_\pi={phi_pi_baseline}$)",
-               OUT / "phi_m_std_inflation.png")
+               OUT / "figs\\phi_m_std_inflation.png")
 
 # asset prices
 save_sd_plot(phi_m_grid, sd_sym_simple["sd_m"], sd_sym_baseline["sd_m"],
@@ -273,7 +274,7 @@ save_sd_plot(phi_m_grid, sd_sym_simple["sd_m"], sd_sym_baseline["sd_m"],
              r"$\phi_m$",
              "Std. dev. of asset price gap",
              rf"Asset price gap volatility vs $\phi_m$ ($\phi_\pi={phi_pi_baseline}$)",
-               OUT / "phi_m_std_asset_prices.png")
+               OUT / "figs\\phi_m_std_asset_prices.png")
 
 
 # %%  Exploring standard deviation through variation in shock calibration for dividends
@@ -305,7 +306,7 @@ save_sd_plot(sd_d_grid, sdd_sd_sym_simple["sd_y"], sdd_sd_sym_baseline["sd_y"],
              r"$\sigma_d$",
              "Std. dev. of output gap",
              rf"Output-gap volatility vs $\sigma_d$ ($\phi_\pi={phi_pi_baseline}, \phi_m={phi_m_baseline}$)",
-               OUT / "sdd_std_output_gap.png")
+               OUT / "figs\\sdd_std_output_gap.png")
 
 # inflation
 save_sd_plot(sd_d_grid, sdd_sd_sym_simple["sd_pi"], sdd_sd_sym_baseline["sd_pi"],
@@ -313,7 +314,7 @@ save_sd_plot(sd_d_grid, sdd_sd_sym_simple["sd_pi"], sdd_sd_sym_baseline["sd_pi"]
              r"$\sigma_d$",
              "Std. dev. of inflation",
              rf"inflation volatility vs $\sigma_d$ ($\phi_\pi={phi_pi_baseline}, \phi_m={phi_m_baseline}$)",
-               OUT / "sdd_std_inflation.png")
+               OUT / "figs\\sdd_std_inflation.png")
 
 # asset prices
 save_sd_plot(sd_d_grid, sdd_sd_sym_simple["sd_m"], sdd_sd_sym_baseline["sd_m"],
@@ -321,7 +322,7 @@ save_sd_plot(sd_d_grid, sdd_sd_sym_simple["sd_m"], sdd_sd_sym_baseline["sd_m"],
              r"$\sigma_d$",
              "Std. dev. of asset price gap",
              rf"Asset price volatility vs $\sigma_d$ ($\phi_\pi={phi_pi_baseline}, \phi_m={phi_m_baseline}$)",
-               OUT / "sdd_std_asset_prices.png")
+               OUT / "figs\\sdd_std_asset_prices.png")
 
 # %% Impulse responses
 cal = Calibration()
@@ -374,7 +375,7 @@ for shock_name in ["demand", "technology", 'monetary', 'dividend']:
         label3 = rf'($\phi_y, \phi_m$) = (0.0, {phi_m_baseline})'
         label4 = rf'($\phi_y, \phi_m$) = ({phi_y_baseline}, {phi_m_baseline})'
 
-        filename = f'irf_{outcome}_{shock_name}.png'
+        filename = f'figs\\irf_{outcome}_{shock_name}.png'
         save_irf_plot(
             h=horizon,
             y1=simple, label1=label1,
@@ -384,42 +385,166 @@ for shock_name in ["demand", "technology", 'monetary', 'dividend']:
             ylabel=ylabel, title=title, path = OUT / filename
             )
 
-
-# %% sd_d = 0 --> reacting to asset prices is good
+# %% Under monetary persistence
 cal = Calibration()
-cal.sd_d = 0  
-no_d_irf_simple, no_d_irf_bsl, no_d_irf_pi_m, no_d_irf_all = sweep_irf(
-phi_pi_baseline, phi_y_baseline, phi_m_baseline, cal
-)
+cal.rho_u = 0.75
 
-
-sd0_sym_baseline, sd0_asym_baseline = sweep_stddevs_through_phi_m(phi_pi_baseline, phi_y_baseline, cal)
-sd0_sym_simple, sd0_asym_simple = sweep_stddevs_through_phi_m(phi_pi_baseline, phi_y_simple, cal)
+sd_sym_bsl_rho_u, sd_asym_bsl_rho_u = sweep_stddevs_through_phi_m(phi_pi_baseline, phi_y_baseline, cal)
+sd_sym_simple_rho_u, sd_asym_simple_rho_u = sweep_stddevs_through_phi_m(phi_pi_baseline, phi_y_simple, cal)
 
 # output gap sd figure, exploring change in phi_m
-save_sd_plot(phi_m_grid, sd0_sym_simple["sd_y"], sd0_sym_baseline["sd_y"],
-             sd0_asym_simple['sd_y'], sd0_asym_baseline['sd_y'],
+save_sd_plot(phi_m_grid, sd_sym_simple_rho_u["sd_y"], sd_sym_bsl_rho_u["sd_y"],
+             sd_asym_simple_rho_u['sd_y'], sd_asym_bsl_rho_u['sd_y'],
              r"$\phi_m$",
-             "Std. dev. of output gap absent financial shocks",
-             rf"Outputgap volatility vs $\phi_m$ ($\phi_\pi={phi_pi_baseline}$)",
-               OUT / "phi_m_0sdd_std_output_gap.png")
+             "Std. dev. of output gap under monetary persistence",
+             rf"Output gap volatility vs $\phi_m$ ($\phi_\pi={phi_pi_baseline}$)",
+               OUT / "figs_monpers\\sdd_std_output_gap_mon.png")
 
 # inflation
-save_sd_plot(phi_m_grid, sd0_sym_simple["sd_pi"], sd0_sym_baseline["sd_pi"],
-             sd0_asym_simple['sd_pi'], sd0_asym_baseline['sd_pi'],
+save_sd_plot(phi_m_grid, sd_sym_simple_rho_u["sd_pi"], sd_sym_bsl_rho_u["sd_pi"],
+             sd_asym_simple_rho_u['sd_pi'], sd_asym_bsl_rho_u['sd_pi'],
              r"$\phi_m$",
-             "Std. dev. of inflation absent financial shocks",
+             "Std. dev. of inflation under monetary persistence",
              rf"Inflation volatility vs $\phi_m$ ($\phi_\pi={phi_pi_baseline}$)",
-               OUT / "phi_m_0sdd_std_inflation.png")
+               OUT / "figs_monpers\\sdd_std_inflation_mon.png")
 
 # asset prices
-save_sd_plot(phi_m_grid, sd0_sym_simple["sd_m"], sd0_sym_baseline["sd_m"],
-             sd0_asym_simple['sd_m'], sd0_asym_baseline['sd_m'],
+save_sd_plot(phi_m_grid, sd_sym_simple_rho_u["sd_m"], sd_sym_bsl_rho_u["sd_m"],
+             sd_asym_simple_rho_u['sd_m'], sd_asym_bsl_rho_u['sd_m'],
              r"$\phi_m$",
-             "Std. dev. of asset price gap absent financial shocks",
+             "Std. dev. of asset price gap under monetary persistence",
              rf"Asset price gap volatility vs $\phi_m$ ($\phi_\pi={phi_pi_baseline}$)",
-               OUT / "phi_m_0sdd_std_asset_prices.png")
+               OUT / "figs_monpers\\sdd_std_asset_prices_mon.png")
 
 
 
+# %% Loss function numerical exploration
+
+# dimensions
+# Fixed phi_y, phi_pi
+# // increasing phi_m
+# // loss value
+# Series:
+    # Symmetric reaction, loss doesnt take m into consideration
+    # Asymmetric reaction, loss doesnt take m into consideration
+    # Symmetric reaction, loss takes m into consideration
+    # Asymmetric reaction, loss takes m into consideration
+# Same chart with monetary persistence
+
+
+def save_loss_plot(x, y1, y2, y3, y4, xlabel, ylabel, title, path):
+    plt.figure(figsize=(8.2, 5.0))
+    plt.plot(x, y1, linewidth=2, label=r"Symmetric, $l_m$ = 0.0")
+    plt.plot(x, y2, linewidth=2, label=r"Symmetric, $l_m$ = 0.1")
+    plt.plot(x, y3, linewidth=2, label=r"Asymmetric, $l_m$ = 0.0")
+    plt.plot(x, y4, linewidth=2, label=r"Asymmetric, $l_m$ = 0.1")
+    plt.xlabel(xlabel); plt.ylabel(ylabel); plt.title(title)
+    plt.ylim(0.9, 1.6)
+    plt.legend(); plt.grid(True, alpha=0.3); plt.tight_layout()
+    plt.savefig(path, dpi=180); plt.close()
+
+
+
+def sweep_loss_function(l_ms, sd_sym, sd_asym, l_y=1, l_pi=1):
+    
+    def loss_function(sd_y, sd_pi, sd_m, l_y, l_pi, l_m):
+        loss_y = l_y*sd_y
+        loss_pi = l_pi*sd_pi
+        loss_m = l_m*sd_m
+        loss = loss_y + loss_pi + loss_m
+        try:  # if lists, normalize by first value
+            rel_loss = loss / loss[0]
+            return rel_loss
+        except Exception:
+            return loss
+    
+    losses_dict = {}
+    for l_m in l_ms:
+        loss_sym_bsl = loss_function(
+            sd_sym['sd_y'],
+            sd_sym['sd_pi'],
+            sd_sym['sd_m'],
+            l_y, l_pi, l_m)
+        loss_asym_bsl = loss_function(
+            sd_asym['sd_y'],
+            sd_asym['sd_pi'],
+            sd_asym['sd_m'],
+            l_y, l_pi, l_m)
+        losses_dict[f'sym_lm_{l_m}'] = loss_sym_bsl
+        losses_dict[f'asym_lm_{l_m}'] = loss_asym_bsl
+    
+    return losses_dict
+
+l_ms = [0, 0.1]
+loss_lm_no_mon = sweep_loss_function(
+    l_ms=l_ms,
+    sd_sym=sd_sym_baseline,
+    sd_asym=sd_asym_baseline
+    )
+# now rho_u
+loss_lm_mon_pers =  sweep_loss_function(
+    l_ms=l_ms,
+    sd_sym=sd_sym_bsl_rho_u,
+    sd_asym=sd_asym_bsl_rho_u
+    )
+
+# no reaction to GDP
+loss_lm_no_mon_no_gdp = sweep_loss_function(
+    l_ms=l_ms,
+    sd_sym=sd_sym_simple,
+    sd_asym=sd_asym_simple
+    )
+
+# mon perss, no reaction to gdp
+loss_lm_mon_no_gdp = sweep_loss_function(
+    l_ms=l_ms,
+    sd_sym=sd_sym_simple_rho_u,
+    sd_asym=sd_asym_simple_rho_u
+    )
+
+# no monetary pers.
+save_loss_plot(x=phi_m_grid,
+               y1=loss_lm_no_mon['sym_lm_0'],
+               y2=loss_lm_no_mon['sym_lm_0.1'],
+               y3=loss_lm_no_mon['asym_lm_0'],
+               y4=loss_lm_no_mon['asym_lm_0.1'],
+               xlabel=r"$\phi_m$",
+               ylabel='L = ${y_{gap}}^2$ + ${\pi_{gap}}^2$ + $l_m$ ${m_{gap}}^2$',
+               title="Relative loss vs $\phi_m$",
+               path=OUT / "figs_loss\\no_mon_pers.png")
+             
+
+# Monetary pers.
+save_loss_plot(x=phi_m_grid,
+               y1=loss_lm_mon_pers['sym_lm_0'],
+               y2=loss_lm_mon_pers['sym_lm_0.1'],
+               y3=loss_lm_mon_pers['asym_lm_0'],
+               y4=loss_lm_mon_pers['asym_lm_0.1'],
+               xlabel=r"$\phi_m$",
+               ylabel='L = ${y_{gap}}^2$ + ${\pi_{gap}}^2$ + $l_m$ ${m_{gap}}^2$',
+               title="Relative loss vs $\phi_m$ under monetary shock persistence",
+               path=OUT / "figs_loss\\mon_pers.png")
+
+
+# No reaction to GDP
+save_loss_plot(x=phi_m_grid,
+               y1=loss_lm_no_mon_no_gdp['sym_lm_0'],
+               y2=loss_lm_no_mon_no_gdp['sym_lm_0.1'],
+               y3=loss_lm_no_mon_no_gdp['asym_lm_0'],
+               y4=loss_lm_no_mon_no_gdp['asym_lm_0.1'],
+               xlabel=r"$\phi_m$",
+               ylabel='L = ${y_{gap}}^2$ + ${\pi_{gap}}^2$ + $l_m$ ${m_{gap}}^2$',
+               title="Relative loss vs $\phi_m$ under $\phi_y$=0",
+               path=OUT / "figs_loss\\no_mon_pers_no_gdp.png")
+
+# No reaction to GDP, monetary persistence
+save_loss_plot(x=phi_m_grid,
+               y1=loss_lm_mon_no_gdp['sym_lm_0'],
+               y2=loss_lm_mon_no_gdp['sym_lm_0.1'],
+               y3=loss_lm_mon_no_gdp['asym_lm_0'],
+               y4=loss_lm_mon_no_gdp['asym_lm_0.1'],
+               xlabel=r"$\phi_m$",
+               ylabel='L = ${y_{gap}}^2$ + ${\pi_{gap}}^2$ + $l_m$ ${m_{gap}}^2$',
+               title="Relative loss vs $\phi_m$ under $\phi_y$=0 and monetary persistence",
+               path=OUT / "figs_loss\\mon_pers_no_gdp.png")
 
